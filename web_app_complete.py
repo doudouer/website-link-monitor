@@ -127,7 +127,7 @@ def check_links():
     
     print(f"开始检查 {len(links)} 个链接")
     
-    results = monitor.batch_monitor(links, max_workers=2)
+    results = monitor.batch_monitor(links, max_workers=4)  # 优化：并发数从2增加到4
     
     stats = {'total': len(results), 'critical': 0, 'high': 0, 'medium': 0, 'low': 0}
     for r in results:

@@ -345,11 +345,11 @@ class FriendlyLinkMonitor:
             
             # 创建浏览器实例
             driver = webdriver.Chrome(options=chrome_options)
-            driver.set_page_load_timeout(60)
+            driver.set_page_load_timeout(30)  # 优化：30秒超时
             
             try:
                 driver.get(url)
-                time.sleep(3)
+                time.sleep(1.5)  # 优化：减少等待时间到1.5秒
                 
                 # 生成截图文件名
                 safe_name = re.sub(r'[^\w\-]', '_', name)[:50]
