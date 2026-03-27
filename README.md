@@ -4,67 +4,59 @@
 
 ---
 
-## 快速开始
+## 产品介绍
 
-### 环境要求
+**网站外链检测系统**是一款专为网站管理员设计的外链安全监控工具。系统能够自动检测网站中的友情链接、外部链接的安全性，帮助管理员及时发现并处理问题链接，保障网站安全合规运营。
 
-- Python 3.8+
-- Chrome浏览器（用于截图功能）
-- ChromeDriver（自动匹配Chrome版本）
+---
 
-### 方法一：命令行运行
+## 痛点分析
 
-```bash
-# 1. 克隆项目
-git clone https://github.com/wangjiuchen2017-dot/website-link-monitor.git
+在网站运营过程中，管理员经常需要在网站中添加友情链接、合作伙伴链接等外部链接。然而，这些外部链接存在以下不可控风险：
 
-# 2. 进入项目目录
-cd website-link-monitor
+### 1. 域名到期风险
+- 友情链接方的域名到期未续费
+- 域名被抢注后可能指向不良网站
+- 原本正常的链接突然变成问题链接
 
-# 3. 安装依赖
-pip install -r requirements.txt
+### 2. 域名转让风险
+- 友情链接方将域名转让给第三方
+- 新持有者可能将域名用于非法用途
+- 网站不知情的情况下继续链接问题网站
 
-# 4. 运行项目
-python web_app_complete.py
+### 3. 内容变更风险
+- 友情链接方网站内容发生重大变化
+- 正常网站转变为赌博、色情等非法网站
+- 网站被黑客攻击后植入恶意内容
 
-# 5. 访问
-# 打开浏览器访问 http://127.0.0.1:5001
-```
+### 4. 人工排查困难
+- 外链数量多，人工逐个检查耗时耗力
+- 无法及时发现链接变化
+- 缺乏有效的风险预警机制
 
-### 方法二：使用启动脚本（Mac）
+---
 
-```bash
-# 1. 克隆项目
-git clone https://github.com/wangjiuchen2017-dot/website-link-monitor.git
+## 核心价值
 
-# 2. 进入项目目录
-cd website-link-monitor
+### 🔒 保障网站安全
+- 及时发现指向非法网站的外链
+- 避免因外链问题导致的法律风险
+- 保护网站品牌形象和用户信任
 
-# 3. 安装依赖
-pip install -r requirements.txt
+### ⚡ 提升运营效率
+- 自动化检测替代人工排查
+- 批量处理大量外链
+- 可视化结果展示，快速定位问题
 
-# 4. 双击启动脚本
-# 双击 "启动服务.command" 文件
-```
+### 🎯 精准风险识别
+- 多维度风险评估模型
+- 智能识别非法内容
+- 减少误报，提高准确性
 
-### 方法三：Docker运行
-
-```bash
-# 1. 克隆项目
-git clone https://github.com/wangjiuchen2017-dot/website-link-monitor.git
-
-# 2. 进入项目目录
-cd website-link-monitor
-
-# 3. 构建Docker镜像
-docker build -t website-link-monitor .
-
-# 4. 运行容器
-docker run -p 5001:5001 website-link-monitor
-
-# 5. 访问
-# 打开浏览器访问 http://127.0.0.1:5001
-```
+### 📊 可视化决策支持
+- 直观的风险等级展示
+- 网站截图辅助人工审核
+- 统计数据一目了然
 
 ---
 
@@ -132,38 +124,6 @@ docker run -p 5001:5001 website-link-monitor
 2. **网络环境**：部分网站可能因网络原因无法访问，建议多次检测确认
 3. **合法合规**：请确保检测行为符合相关法律法规要求
 4. **隐私保护**：系统不会存储被检测网站的用户数据
-
----
-
-## 常见问题
-
-### Q: 截图功能不工作？
-A: 请确保已安装Chrome浏览器和ChromeDriver。Mac用户可以使用：
-```bash
-brew install chromedriver
-```
-
-### Q: 如何安装Python依赖？
-A: 运行以下命令：
-```bash
-pip install -r requirements.txt
-```
-
-### Q: 端口被占用怎么办？
-A: 修改 `web_app_complete.py` 中的端口号，或使用以下命令查找并关闭占用端口的进程：
-```bash
-lsof -ti:5001 | xargs kill -9
-```
-
----
-
-## 更新日志
-
-### v1.0.0 (2024-03)
-- 初始版本发布
-- 支持链接检测、风险评估、网站截图
-- 现代化UI界面
-- 多维度风险检测算法
 
 ---
 
