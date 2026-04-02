@@ -249,20 +249,126 @@ class FriendlyLinkMonitor:
                             result['redirect_chain'].append(target_url)
                         break
             
-            # 检查关键词
+            # ===== 智能风险评估算法 =====
+            # 第一步：提取网站结构信息
             text = soup.get_text().lower()
+            html_text = response.text.lower()
             
-            for category, info in self.illegal_keywords.items():
-                for keyword in info['keywords']:
-                    if keyword.lower() in text:
+            # 获取标题和描述（权重最高）
+            title_text = result['title'].lower() if result['title'] else ''
+            description = ''
+            meta_desc = soup.find('meta', attrs={'name': 'description'})
+            if meta_desc and meta_desc.get('content'):
+                description = meta_desc.get('content', '').lower()
+            
+            # 提取导航菜单内容
+            nav_text = ''
+            nav_elements = soup.find_all(['nav', 'ul', 'div'], class_=lambda x: x and any(k in str(x).lower() for k in ['nav', 'menu', 'header', '导航', '栏目']))
+            for nav in nav_elements[:5]:
+                nav_text += ' ' + nav.get_text().lower()
+            
+            # 提取小标题
+            headings_text = ''
+            for tag in ['h1', 'h2', 'h3', 'h4']:
+                headings = soup.find_all(tag)
+                for h in headings[:10]:
+                    headings_text += ' ' + h.get_text().lower()
+            
+            # 合并结构文本
+            structure_text = nav_text + ' ' + headings_text
+            
+            # 第二步：关键词分级检测
+            # 高风险关键词（明确的博彩/色情品牌，单独出现即可判定）
+            high_risk_keywords = {
+                'gambling': ['casino', '百家乐', '威尼斯人', '太阳城', '葡京', '新葡京', 'bet365', 'betwin', '188bet', 'betvictor', 'betway', 'betonline', '澳门赌场', '皇冠现金网', '金沙赌场', '赢波网', '傥士咀', '赌波', '波经', '盘口网', '推介网', '赌球', '博球'],
+                'adult': ['porn', 'xxx', 'sex video', 'nude', '色情', '成人视频', '成人电影', '淫秽', '乱伦', '裸聊', '性爱视频', 'av电影', 'av视频', '黄片', '约炮', '一夜情', '援交', '卖淫', '嫖娼', '招嫖']
+            }
+            
+            # 中风险关键词（需要组合验证）
+            medium_risk_keywords = {
+                'gambling': ['赌', '博彩', '彩票', '投注', 'bet', 'slot', 'poker', 'gambl', '必赢', '必胜', '至尊', '豪赢', '赢钱', '提现', '充值', '返水', '返利', '赢波', '足球盘口', '澳门足球', '足球推介', '足球推荐网', '足球咨询', '波胆', '赔率', '让球', '大小球', '滚球', '走地', '亚盘', '欧盘', '水位', '注单', '代理加盟', '招商加盟', '会员注册', '盘口', '推介', '足球'],
+                'adult': ['情色', '激情视频', '黄色', '偷拍', '自拍', '走光', '裸体', '黑料', '吃瓜', '爆料', '网红翻车', '明星八卦', '娱乐八卦', '大瓜', '瓜王', '每日大赛', 'mrds', '实时吃瓜'],
+                'phishing': ['密码错误', '账号异常', '紧急验证', '账户冻结', '安全验证', '请验证您的身份', '您的账户存在风险', '立即验证', '账户将被冻结'],
+                'fraud': ['中奖', '免费领取', '刷单', '兼职', '日赚', '躺赚', '轻松赚钱', '快速致富', '高回报', '零风险', '保本保息', '日入过万']
+            }
+            
+            # 第三步：检测高风险关键词（标题/导航中出现直接判定）
+            for category, keywords in high_risk_keywords.items():
+                for keyword in keywords:
+                    keyword_lower = keyword.lower()
+                    # 标题/描述中出现
+                    if keyword_lower in title_text or keyword_lower in description:
                         result['keywords_found'].append({
                             'category': category,
                             'keyword': keyword,
-                            'label': info['label']
+                            'label': '赌博' if category == 'gambling' else '成人内容',
+                            'location': '标题/描述'
                         })
-                        result['risk_score'] += info['score']
-                        result['risk_factors'].append(f'发现{info["label"]}关键词: {keyword}')
+                        result['risk_score'] += 100
+                        result['risk_factors'].append(f'⚠️ 标题/描述发现高风险关键词: {keyword}')
                         break
+                    # 导航/栏目中出现
+                    elif keyword_lower in structure_text:
+                        result['keywords_found'].append({
+                            'category': category,
+                            'keyword': keyword,
+                            'label': '赌博' if category == 'gambling' else '成人内容',
+                            'location': '导航/栏目'
+                        })
+                        result['risk_score'] += 100
+                        result['risk_factors'].append(f'⚠️ 导航/栏目发现高风险关键词: {keyword}')
+                        break
+            
+            # 第四步：检测中风险关键词（需要组合验证）
+            found_medium_keywords = {'gambling': [], 'adult': [], 'phishing': [], 'fraud': []}
+            for category, keywords in medium_risk_keywords.items():
+                for keyword in keywords:
+                    keyword_lower = keyword.lower()
+                    # 标题/描述中出现（权重高）
+                    if keyword_lower in title_text or keyword_lower in description:
+                        found_medium_keywords[category].append({'keyword': keyword, 'location': '标题/描述', 'score': 50})
+                    # 导航/栏目中出现（权重中）
+                    elif keyword_lower in structure_text:
+                        found_medium_keywords[category].append({'keyword': keyword, 'location': '导航/栏目', 'score': 40})
+                    # 正文中出现（权重低）
+                    elif keyword_lower in text or keyword_lower in html_text:
+                        found_medium_keywords[category].append({'keyword': keyword, 'location': '正文', 'score': 15})
+            
+            # 第五步：组合验证（同一类别多个关键词才判定）
+            for category, found_list in found_medium_keywords.items():
+                if len(found_list) >= 2:
+                    # 多个关键词组合，风险更高
+                    keywords_str = ', '.join([k['keyword'] for k in found_list[:3]])
+                    total_score = sum(k['score'] for k in found_list)
+                    result['risk_score'] += min(total_score, 100)  # 上限100分
+                    result['risk_factors'].append(f'发现多个{category}相关关键词: {keywords_str}')
+                    for k in found_list:
+                        result['keywords_found'].append({
+                            'category': category,
+                            'keyword': k['keyword'],
+                            'label': category,
+                            'location': k['location']
+                        })
+                elif len(found_list) == 1:
+                    # 单个关键词，只有标题/导航才加分
+                    k = found_list[0]
+                    if k['location'] in ['标题/描述', '导航/栏目']:
+                        result['risk_score'] += k['score']
+                        result['keywords_found'].append({
+                            'category': category,
+                            'keyword': k['keyword'],
+                            'label': category,
+                            'location': k['location']
+                        })
+                        result['risk_factors'].append(f'{k["location"]}发现{category}关键词: {k["keyword"]}')
+                    # 正文中的单个中风险关键词不加分
+            
+            # 第六步：检测正常网站特征（降低误判）
+            normal_features = ['icp', '备案', '工信部', '公安机关', '版权所有', 'copyright', '©', '政府', 'edu', 'org', 'gov.cn']
+            normal_count = sum(1 for f in normal_features if f in text or f in html_text)
+            if normal_count >= 2:
+                result['risk_score'] = max(0, result['risk_score'] - 20)
+                result['risk_factors'].append('✓ 检测到正规网站特征')
             
             # 检查HTTPS - 不加分，只做提示
             if not response.url.startswith('https'):
@@ -345,17 +451,21 @@ class FriendlyLinkMonitor:
             
             # 创建浏览器实例
             driver = webdriver.Chrome(options=chrome_options)
-            driver.set_page_load_timeout(30)  # 优化：30秒超时
+            driver.set_page_load_timeout(90)  # 增加超时时间到90秒
             
             try:
                 driver.get(url)
-                time.sleep(1.5)  # 优化：减少等待时间到1.5秒
+                time.sleep(3)  # 增加等待时间到3秒
                 
                 # 生成截图文件名
                 safe_name = re.sub(r'[^\w\-]', '_', name)[:50]
                 timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
                 screenshot_filename = f'{safe_name}_{timestamp}.png'
                 screenshot_path = os.path.join(self.screenshot_dir, screenshot_filename)
+                
+                # 确保目录存在
+                if not os.path.exists(self.screenshot_dir):
+                    os.makedirs(self.screenshot_dir)
                 
                 # 保存截图
                 driver.save_screenshot(screenshot_path)
@@ -367,7 +477,7 @@ class FriendlyLinkMonitor:
         except ImportError:
             print("⚠️ Selenium未安装，跳过截图")
         except Exception as e:
-            print(f"截图失败: {str(e)[:80]}")
+            print(f"截图失败: {str(e)[:200]}")
         
         return screenshot_path
     
@@ -401,16 +511,29 @@ class FriendlyLinkMonitor:
         result['网站内容'] = content_result
         result['总风险分数'] += content_result['risk_score']
         result['风险因素'].extend(content_result['risk_factors'])
-        
+
+        # 如果HTTP失败且不是HTTPS，尝试HTTPS
+        if url.startswith('http://') and not content_result.get('is_accessible', False):
+            https_url = url.replace('http://', 'https://')
+            content_result_https = self.check_website_content(https_url)
+            if content_result_https.get('is_accessible', False):
+                result['网站内容'] = content_result_https
+                result['总风险分数'] += content_result_https['risk_score']
+                result['风险因素'].extend(content_result_https['risk_factors'])
+                url = https_url
+
         # 3. 检查域名状态（WHOIS查询较慢，可选）
         if result['总风险分数'] > 0 or link_info.get('check_whois', False):
             domain_status = self.check_domain_status(url)
             result['域名状态'] = domain_status
             result['总风险分数'] += domain_status['risk_score']
             result['风险因素'].extend(domain_status['risk_factors'])
-        
+
         # 4. 获取网站截图（所有网站都截图，便于人工审核）
+        # 如果HTTP截图失败，尝试HTTPS
         screenshot_path = self.take_screenshot(url, name)
+        if not screenshot_path and url.startswith('http://'):
+            screenshot_path = self.take_screenshot(url.replace('http://', 'https://'), name)
         result['网站截图'] = screenshot_path
         
         # 确定风险等级
