@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: website-link-monitor
+    env: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: PORT
+        value: 5001
+      - key: CHROME_BIN
+        value: /usr/bin/chromium

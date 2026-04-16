@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.pyc
+
+# Screenshots
+Screenshots/
+screenshots/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Test data
+*.test
+*.log
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Build files
+build/
+dist/
+*.egg-info/
